@@ -1,8 +1,9 @@
-public with sharing global interface iTriggerHandler {
-    public static beforeInsert(List<SOBJECT> ListOfRecords);
-    public static beforeUpdate(List<SOBJECT> ListOfOldRecords, List<SOBJECT> ListOfNewRecords);
-    public static beforeDelete(List<SOBJECT> ListOfRecords);
-    public static afterInsert(List<SOBJECT> ListOfRecords);
-    public static afterUpdate(List<SOBJECT> ListOfRecords);
-    run();
+public interface iTriggerHandler {
+    void beforeInsert();
+    void beforeUpdate();
+    void beforeDelete();
+    void afterInsert();
+    void afterUpdate();
+    void afterDelete();
+    void run();
 }

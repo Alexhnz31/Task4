@@ -1,10 +1,24 @@
 public with sharing class LeadTriggerHandler extends BaseTriggerHandler {
-    @override
-    public void beforeInsert(List<SObject> newRecords) {
-    }
-    @override
-    public void beforeUpdate(List<SObject> oldRecords, List<SObject> newRecords){
-
+    
+    
+    public override void beforeInsert() {
     }
     
+    public override void beforeUpdate() {
+    }
+    
+    public override void beforeDelete() {
+    }
+
+    public override void afterInsert() {
+    }
+
+    public override void afterUpdate() {
+    }
+
+    public override void afterDelete() {
+    }
+
+    public override void afterUndelete() {
+    }
 }

@@ -1,8 +1,17 @@
 public with sharing class ProductTriggerHandler extends BaseTriggerHandler {
-   @override
-   public void beforeInsert(List<SObject> newRecords) {}
-   @override
-   public void beforeUpdate(List<SObject> oldRecords, List<SObject> newRecords){} 
-   @override
-   public void afterUpdate(List<Sobject> updatedRecords) {}
+        
+    public override void beforeInsert() {
+    }
+    
+    public override void beforeUpdate() {}
+    
+    public override void beforeDelete() {}
+
+    public override void afterInsert() {}
+    
+    public override void afterUpdate() {}
+
+    public override void afterDelete() {}
+    
+    public override void afterUndelete() {}
 }
