@@ -16,7 +16,8 @@ public with sharing class OpportunityTriggerHandler extends BaseTriggerHandler {
     private void handleRecordTypeAssignment() {
         final Id CAMPUS_SALE_RT_ID = '012g5000000CFhdAAG';
         final Id GROUP_SALE_RT_ID = '012g5000000CFg1AAG'; 
-        List<Opportunity> opportunities = this.isInsert ? this.newList : this.newList;
+        // ИСПРАВЛЕНИЕ: this.newList доступен в beforeInsert и beforeUpdate
+        List<Opportunity> opportunities = (List<Opportunity>) this.newList; 
         for (SObject sObj : opportunities) {
             Opportunity newOpp = (Opportunity) sObj;
             if (newOpp.get('Number_of_Students__c') != null) {

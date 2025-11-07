@@ -1,70 +1,100 @@
 public with sharing class OpportunityProductTriggerHandler extends BaseTriggerHandler {
     
+    public override void beforeInsert() {
+        handleProductFamilyMatch_Before(); 
+    }
+    
+    public override void beforeUpdate() {
+        handleProductFamilyMatch_Before(); 
+    }
+
     public override void afterInsert() {
-        handleProductFamilyMatch();
-        updateOpportunityRollups(); // Добавление RLSF логики
+        updateOpportunityRollups();
     }
     
     public override void afterUpdate() {
-        handleProductFamilyMatch();
-        updateOpportunityRollups(); // Добавление RLSF логики
+        updateOpportunityRollups();
+    }
+    
+    public override void afterDelete() {
+        updateOpportunityRollupsFromOldRecords();
     }
 
-    public override void beforeInsert() {}
-    public override void beforeUpdate() {}
     public override void beforeDelete() {}
-    public override void afterDelete() {}
     public override void afterUndelete() {}
 
     /**
-     * Логика копирования формульного поля (Миграция Flow).
+     * Устанавливает Product_Family_Match__c, запрашивая ProductCode и используя сервисную карту.
+     * Это обходит проблемы с Formula Fields и гарантирует, что RollupService увидит правильное значение.
      */
-    private void handleProductFamilyMatch() {
-        List<OpportunityLineItem> olisToUpdate = new List<OpportunityLineItem>();
+    private void handleProductFamilyMatch_Before() {
+        Set<Id> productIds = new Set<Id>();
         
+        // 1. Collect product IDs
         for (SObject sObj : this.newList) {
             OpportunityLineItem newOli = (OpportunityLineItem) sObj;
+            if (newOli.Product2Id != null) {
+                productIds.add(newOli.Product2Id);
+            }
+        }
+
+        if (productIds.isEmpty()) return;
+
+        // 2. Get Product Code (and Family for map) for all products
+        // ВАЖНО: Запрашиваем ProductCode, так как он используется для маппинга
+        Map<Id, Product2> products = new Map<Id, Product2>([
+            SELECT Id, ProductCode 
+            FROM Product2 
+            WHERE Id IN :productIds
+        ]);
+        
+        // Получаем карту маппинга (Code -> Family)
+        Map<String, String> familyMapping = ProductFamilyByCodeMappingService.getProductCodeMapping();
+
+        // 3. Set Product_Family_Match__c directly on newOli
+        for (SObject sObj : this.newList) {
+            OpportunityLineItem newOli = (OpportunityLineItem) sObj;
+            OpportunityLineItem oldOli = this.isUpdate ? (OpportunityLineItem) this.oldMap.get(newOli.Id) : null;
             
-            if (newOli.get('Product_Family_Formula__c') != null) {
-                String formulaValue = (String) newOli.get('Product_Family_Formula__c');
+            if (newOli.Product2Id != null && products.containsKey(newOli.Product2Id)) {
+                Product2 prod = products.get(newOli.Product2Id);
+                String productCode = prod.ProductCode; 
+                String derivedFamily = familyMapping.get(productCode); // Получаем Family из карты
                 
-                if (formulaValue != (String) newOli.get('Product_Family_Match__c')) {
-                    newOli.put('Product_Family_Match__c', formulaValue);
-                    olisToUpdate.add(newOli);
+                if (derivedFamily != null) {
+                    // Устанавливаем значение только если оно отличается или это новая запись
+                    if (this.isInsert || derivedFamily != (String) oldOli?.get('Product_Family_Match__c')) {
+                        newOli.put('Product_Family_Match__c', derivedFamily);
+                    }
+                } else if (this.isUpdate && newOli.Product2Id == oldOli.Product2Id) {
+                    // Если код продукта не найден, но он был ранее, оставляем как есть
+                } else {
+                    // Если код продукта не найден и это новая запись, сбрасываем или оставляем null
+                    newOli.put('Product_Family_Match__c', null); 
                 }
             }
         }
-        
-        if (!olisToUpdate.isEmpty()) {
-            // Внимание: Здесь должен быть использован статический флаг рекурсии
-            update olisToUpdate; 
-        }
     }
 
-    /**
-     * Выполняет RLSF на Opportunity при изменении OLI.
-     * RLSF #1: Count Of Arduino Products (Opp_Summ__c)
-     * RLSF #2: Not Arduino Board (not_Arduino_Board__c)
-     */
     private void updateOpportunityRollups() {
-        // Получаем ID родительских Opportunity, которые нужно обновить.
         Set<Id> oppIdsToRecalculate = new Set<Id>();
         
-        // 1. Собираем ID из новых записей (insert/update)
         for(SObject sObj : this.newList) {
             oppIdsToRecalculate.add(((OpportunityLineItem)sObj).OpportunityId);
         }
-        // 2. Собираем ID из старых записей (для delete/update, если OpportunityId изменился)
-        if(this.oldMap != null) {
-            for(SObject oldSObj : this.oldMap.values()) {
-                oppIdsToRecalculate.add(((OpportunityLineItem)oldSObj).OpportunityId);
-            }
+
+        if (oppIdsToRecalculate.isEmpty()) return;
+        RollupService.recalculateOpportunityProductRollups(oppIdsToRecalculate);
+    }
+    
+    private void updateOpportunityRollupsFromOldRecords() {
+        Set<Id> oppIdsToRecalculate = new Set<Id>();
+        
+        for(SObject oldSObj : this.oldMap.values()) {
+            oppIdsToRecalculate.add(((OpportunityLineItem)oldSObj).OpportunityId);
         }
 
         if (oppIdsToRecalculate.isEmpty()) return;
-
-        // Вызов сервисного класса для выполнения свертки (RollupService)
-        // ВАЖНО: Требуется класс RollupService.cls, который вы создадите.
         RollupService.recalculateOpportunityProductRollups(oppIdsToRecalculate);
     }
 }
