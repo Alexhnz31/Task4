@@ -1,3 +1,6 @@
-trigger LeadTrigger on SOBJECT (before insert) {
-
+trigger LeadTrigger on Lead (before insert, 
+    before update, 
+    after update
+) {
+    TriggerFactory.run();
 }

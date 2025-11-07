@@ -1,6 +1,7 @@
-
-trigger OpportunityTrigger on SOBJECT (before insert) {
-
-    
-
+trigger OpportunityTrigger on Opportunity (
+    before insert, 
+    before update, 
+    after update
+) {
+    TriggerFactory.run();
 }
