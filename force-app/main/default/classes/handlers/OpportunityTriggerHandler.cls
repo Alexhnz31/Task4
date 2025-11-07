@@ -16,7 +16,6 @@ public with sharing class OpportunityTriggerHandler extends BaseTriggerHandler {
     private void handleRecordTypeAssignment() {
         final Id CAMPUS_SALE_RT_ID = '012g5000000CFhdAAG';
         final Id GROUP_SALE_RT_ID = '012g5000000CFg1AAG'; 
-        // ИСПРАВЛЕНИЕ: this.newList доступен в beforeInsert и beforeUpdate
         List<Opportunity> opportunities = (List<Opportunity>) this.newList; 
         for (SObject sObj : opportunities) {
             Opportunity newOpp = (Opportunity) sObj;
@@ -54,9 +53,7 @@ public with sharing class OpportunityTriggerHandler extends BaseTriggerHandler {
         }
     }
     
-    // Вспомогательный метод для создания Account_Interest__c
     private void createAccountInterests(Set<Id> oppIds) {
-        // 1. Получение AccountId (более надежно, чем через перекрестный запрос OLI)
         Map<Id, Id> oppIdToAccountId = new Map<Id, Id>();
         for (Opportunity o : [SELECT AccountId FROM Opportunity WHERE Id IN :oppIds]) {
             if (o.AccountId != null) {

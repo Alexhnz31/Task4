@@ -1,6 +1,5 @@
 public with sharing class ProductTriggerHandler extends BaseTriggerHandler {
 
-    // Статический флаг для предотвращения рекурсии
     public static Boolean skipOpportunityProductTrigger = false;
     
     public override void beforeInsert() {
@@ -22,7 +21,6 @@ public with sharing class ProductTriggerHandler extends BaseTriggerHandler {
 
 
     private void enforceProductCodeMappingAndFamilyUpdate() {
-        // Вызов сервисного класса
         Map<String, String> validMapping = ProductFamilyByCodeMappingService.getProductCodeMapping();
         
         for (SObject sObj : this.newList) {
@@ -34,10 +32,8 @@ public with sharing class ProductTriggerHandler extends BaseTriggerHandler {
             String expectedFamily = validMapping.get(productCode);
             
             if (expectedFamily == null) {
-                // ТРЕБОВАНИЕ: Блокировка
                 newProduct.addError('Such product code is not allowed in the system. Please update the PFC mapping or contact administrator.');
             } else {
-                // ТРЕБОВАНИЕ: Обновление Family
                 newProduct.Family = expectedFamily;
             }
         }
