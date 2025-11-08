@@ -6,7 +6,6 @@ public class LeadScoringAttributes {
 
     public static Attribute getAttributeByApiName(String apiName) {
         try {
-            // Удаляем суффикс '__c' для сопоставления с именем Enum
             String attributeName = apiName.endsWith('__c') ? apiName.substring(0, apiName.length() - 3) : apiName;
             
             return (Attribute) Attribute.valueOf(attributeName);

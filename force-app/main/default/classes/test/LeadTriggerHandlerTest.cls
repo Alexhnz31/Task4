@@ -5,11 +5,8 @@ private class LeadTriggerHandlerTest {
         return Test.getStandardPricebookId();
     }
 
-    // --- @TestSetup: ДАННЫЕ NON-SETUP ---
-    // CMDT должен быть создан вручную в Setup.
     @TestSetup
     static void setupTestData() {
-        // NON-SETUP ОБЪЕКТЫ
         Account testAcc = new Account(Name = 'Test Account for Triggers');
         insert testAcc;
         
@@ -17,19 +14,16 @@ private class LeadTriggerHandlerTest {
         Product2 prodSensor = new Product2(Name = 'Temp Sensor', ProductCode = 'SEN010', Family = 'Default');
         insert new List<Product2>{prodArduino, prodSensor};
         
-        // КРИТИЧЕСКАЯ ПРОВЕРКА: Принудительный запрос CMDT (чтобы сделать его видимым в тесте)
         System.runAs(new User(Id = UserInfo.getUserId())) {
             List<Lead_Scoring_Setting__mdt> rules = [
                 SELECT Id 
                 FROM Lead_Scoring_Setting__mdt
                 WHERE DeveloperName IN ('STUDENT_RULE_1', 'STUDENT_RULE_2')
             ];
-            // Если этот ассерт падает, это означает, что вы не создали правила в Setup.
             System.assert(rules.size() == 2, 'FAILURE: CMDT rules STUDENT_RULE_1 and STUDENT_RULE_2 must be created manually in Setup.');
         }
     }
 
-    // --- 1. Тестирование ВСТАВКИ ---
     @isTest
     static void testLeadScoring_ScoreCalculationOnInsert() {
         
@@ -46,11 +40,9 @@ private class LeadTriggerHandlerTest {
         Test.stopTest(); 
 
         Lead resultLead = [SELECT Lead_Score__c FROM Lead WHERE Id = :testLead.Id];
-        // Ожидаем 10.0
         System.assertEquals(10.0, resultLead.Lead_Score__c, 'Score should be 10 based on the CMDT rule.');
     }
     
-    // --- 2. Тестирование ОБНОВЛЕНИЯ ---
     @isTest
     static void testLeadScoring_ScoreCalculationOnUpdate() {
         
@@ -59,11 +51,10 @@ private class LeadTriggerHandlerTest {
         Lead testLead = new Lead(
             LastName = 'LowScore',
             Company = 'TestCo',
-            Number_of_Students__c = 30 // Insert дает 10 баллов
+            Number_of_Students__c = 30
         );
         insert testLead; 
 
-        testLead.Number_of_Students__c = 50; // Обновление: 10 + 5 = 15
 
         Test.startTest();
         update testLead;
@@ -73,7 +64,6 @@ private class LeadTriggerHandlerTest {
         System.assertEquals(15.0, resultLead.Lead_Score__c, 'Score should be 15 after update (10 + 5).');
     }
     
-    // --- 3. Тестирование НЕГАТИВНОГО СЦЕНАРИЯ ---
     @isTest
     static void testLeadScoring_NegativeScenario() {
         
@@ -82,7 +72,7 @@ private class LeadTriggerHandlerTest {
         Lead testLead = new Lead(
             LastName = 'ZeroScore',
             Company = 'TestCo',
-            Number_of_Students__c = 1 // Не срабатывает ни одно правило
+            Number_of_Students__c = 1
         );
 
         Test.startTest();

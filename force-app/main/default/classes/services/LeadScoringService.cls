@@ -2,7 +2,6 @@ public with sharing class LeadScoringService {
 
     public static void calculateScore(List<Lead> leads) {
         
-        // Читаем Custom Metadata Type (API Name __mdt). Должен быть создан в Setup.
         List<Lead_Scoring_Setting__mdt> rules = [
             SELECT Attribute_API_Name__c, Condition_Operator__c, Comparison_Value__c, Score_Change__c 
             FROM Lead_Scoring_Setting__mdt

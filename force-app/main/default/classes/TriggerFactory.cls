@@ -1,7 +1,6 @@
 public with sharing class TriggerFactory {
     
     private static Boolean isSObjectType(String expectedObjectName) {
-        // Используем Trigger.SObjectType для надежной маршрутизации
         return Trigger.isExecuting && 
                String.valueOf(Trigger.SObjectType) == expectedObjectName;
     }
