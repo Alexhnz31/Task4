@@ -1,5 +1,5 @@
 public with sharing class OpportunityProductTriggerHandler extends BaseTriggerHandler {
-    
+
     public override void beforeInsert() {
         handleProductFamilyMatch_Before(); 
     }
@@ -23,17 +23,14 @@ public with sharing class OpportunityProductTriggerHandler extends BaseTriggerHa
     public override void beforeDelete() {}
     public override void afterUndelete() {}
 
-  
     private void handleProductFamilyMatch_Before() {
         Set<Id> productIds = new Set<Id>();
-        
         for (SObject sObj : this.newList) {
-            OpportunityLineItem newOli = (OpportunityLineItem) sObj;
-            if (newOli.Product2Id != null) {
-                productIds.add(newOli.Product2Id);
+            OpportunityLineItem oli = (OpportunityLineItem) sObj;
+            if (oli.Product2Id != null) {
+                productIds.add(oli.Product2Id);
             }
         }
-
         if (productIds.isEmpty()) return;
 
         Map<Id, Product2> products = new Map<Id, Product2>([
@@ -48,42 +45,40 @@ public with sharing class OpportunityProductTriggerHandler extends BaseTriggerHa
             OpportunityLineItem newOli = (OpportunityLineItem) sObj;
             OpportunityLineItem oldOli = this.isUpdate ? (OpportunityLineItem) this.oldMap.get(newOli.Id) : null;
             
-            if (newOli.Product2Id != null && products.containsKey(newOli.Product2Id)) {
-                Product2 prod = products.get(newOli.Product2Id);
-                String productCode = prod.ProductCode; 
-                String derivedFamily = familyMapping.get(productCode); 
-                
-                if (derivedFamily != null) {
-                    if (this.isInsert || derivedFamily != (String) oldOli?.get('Product_Family_Match__c')) {
-                        newOli.put('Product_Family_Match__c', derivedFamily);
-                    }
-                } else if (this.isUpdate && newOli.Product2Id == oldOli.Product2Id) {
-                } else {
-                    newOli.put('Product_Family_Match__c', null); 
-                }
+            if (newOli.Product2Id == null || !products.containsKey(newOli.Product2Id)) continue;
+
+            Product2 prod = products.get(newOli.Product2Id);
+            String productCode = prod.ProductCode; 
+            String derivedFamily = familyMapping.get(productCode); 
+            
+            if (derivedFamily == null) {
+                newOli.addError('Such product code is not allowed in the system. Please update the PFC mapping or contact administrator.');
+                continue;
+            }
+
+            if (this.isInsert || derivedFamily != (String) oldOli?.get('Product_Family_Match__c')) {
+                newOli.Product_Family_Match__c = derivedFamily;
             }
         }
     }
 
     private void updateOpportunityRollups() {
-        Set<Id> oppIdsToRecalculate = new Set<Id>();
-        
-        for(SObject sObj : this.newList) {
-            oppIdsToRecalculate.add(((OpportunityLineItem)sObj).OpportunityId);
+        Set<Id> oppIds = new Set<Id>();
+        for (SObject sObj : this.newList) {
+            oppIds.add(((OpportunityLineItem)sObj).OpportunityId);
         }
-
-        if (oppIdsToRecalculate.isEmpty()) return;
-        RollupService.recalculateOpportunityProductRollups(oppIdsToRecalculate);
+        if (!oppIds.isEmpty()) {
+            RollupService.recalculateOpportunityProductRollups(oppIds);
+        }
     }
     
     private void updateOpportunityRollupsFromOldRecords() {
-        Set<Id> oppIdsToRecalculate = new Set<Id>();
-        
-        for(SObject oldSObj : this.oldMap.values()) {
-            oppIdsToRecalculate.add(((OpportunityLineItem)oldSObj).OpportunityId);
+        Set<Id> oppIds = new Set<Id>();
+        for (SObject oldSObj : this.oldMap.values()) {
+            oppIds.add(((OpportunityLineItem)oldSObj).OpportunityId);
         }
-
-        if (oppIdsToRecalculate.isEmpty()) return;
-        RollupService.recalculateOpportunityProductRollups(oppIdsToRecalculate);
+        if (!oppIds.isEmpty()) {
+            RollupService.recalculateOpportunityProductRollups(oppIds);
+        }
     }
 }
